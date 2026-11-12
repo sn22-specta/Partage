@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>PARTAGE D'ÉCRAN</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+:root{--bg:#080c14;--pn:#111a2b;--bd:#22314d;--tx:#e5ecf6;--mu:#7a8aa6;--cy:#2ee6d6;--am:#ffb020;--rd:#ff4d5e;--gn:#34d399}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;user-select:none;-webkit-user-select:none}
+.num{font-family:ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+.hide{display:none!important}
+
+/* LANDING */
+#landing{position:fixed;inset:0;background:radial-gradient(ellipse at top,#0f172a,#080c14);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:24px;z-index:100;text-align:center;overflow-y:auto}
+#landing h1{font-size:24px;font-weight:800;letter-spacing:.2em;color:var(--cy);display:flex;align-items:center;gap:12px}
+#landing .sub{color:var(--mu);max-width:340px;line-height:1.5;font-size:13px}
+#landing .choices{display:flex;flex-direction:column;gap:12px;width:100%;max-width:340px;margin-top:8px}
+#landing button{padding:18px;border-radius:14px;border:2px solid var(--bd);background:var(--pn);color:var(--tx);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:14px;transition:all .15s;text-align:left}
+#landing button:active{transform:scale(.97)}
+#landing button.host{border-color:var(--am)}
+#landing button.viewer{border-color:var(--gn)}
+#landing button svg{width:32px;height:32px;flex-shrink:0}
+#landing button.host svg{color:var(--am)}
+#landing button.viewer svg{color:var(--gn)}
+#landing button small{font-size:11px;color:var(--mu);font-weight:500;display:block;margin-top:3px}
+#landing .manual{width:100%;max-width:340px;margin-top:8px;padding:12px;background:rgba(17,26,43,.5);border:1px solid var(--bd);border-radius:12px;display:flex;flex-direction:column;gap:8px}
+#landing .manual label{font-size:11px;color:var(--mu);text-align:left;font-weight:600}
+#landing .manual input{background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:12px;color:var(--tx);font-family:ui-monospace,monospace;font-size:14px;text-align:center;letter-spacing:1px;width:100%}
+#landing .manual input:focus{outline:none;border-color:var(--cy)}
+#landing .manual button{padding:11px;background:var(--cy);color:#04211f;border:none;border-radius:8px;font-weight:700;font-size:13px}
+#landing .warn{background:rgba(255,176,32,.1);border:1px solid rgba(255,176,32,.3);border-radius:10px;padding:10px 14px;font-size:11px;color:var(--am);max-width:340px;line-height:1.5;margin-top:8px;text-align:left}
+
+/* HEADER */
+header{display:flex;justify-content:space-between;align-items:center;padding:max(10px,env(safe-area-inset-top)) 14px 8px;flex-shrink:0}
+.brand{font-weight:800;letter-spacing:.2em;font-size:13px;display:flex;align-items:center;gap:8px}
+.brand svg{color:var(--cy);width:18px;height:18px}
+.badge{font-size:11px;color:var(--mu);display:flex;gap:6px;align-items:center;padding:4px 10px;border-radius:20px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--gn);box-shadow:0 0 8px var(--gn);animation:pulse 1.5s infinite}
+.dot.off{background:var(--rd);box-shadow:0 0 8px var(--rd);animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* HOST VIEW */
+#hostView{flex:1;display:flex;flex-direction:column;min-height:0}
+.hostStage{flex:1;min-height:0;position:relative;background:#000;margin:8px 12px;border-radius:14px;overflow:hidden;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center}
+#localPreview{max-width:100%;max-height:100%;object-fit:contain;width:100%;height:100%}
+.hostStage .previewOverlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(8,12,20,.85);z-index:2;text-align:center;padding:24px}
+.hostStage .previewOverlay svg{width:56px;height:56px;color:var(--cy);opacity:.6}
+.hostStage .previewOverlay p{font-size:14px;color:var(--mu);max-width:280px;line-height:1.5}
+.hostStage .previewOverlay button{background:var(--cy);color:#04211f;border:none;padding:14px 28px;border-radius:12px;font-weight:800;font-size:15px;cursor:pointer}
+.liveBadge{position:absolute;top:10px;left:10px;background:rgba(255,77,94,.95);color:#fff;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:800;letter-spacing:1px;z-index:3;display:flex;align-items:center;gap:6px}
+.liveBadge::before{content:'';width:6px;height:6px;background:#fff;border-radius:50%;animation:pulse 1s infinite}
+
+.linkPanel{background:var(--pn);border:1px solid var(--bd);border-radius:14px;padding:14px;margin:8px 12px;display:flex;flex-direction:column;gap:10px;flex-shrink:0}
+.linkPanel h2{font-size:12px;color:var(--cy);font-weight:700;letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+.linkPanel h2 svg{width:14px;height:14px}
+.linkBox{background:var(--bg);border:2px dashed var(--cy);border-radius:10px;padding:12px;font-family:ui-monospace,monospace;font-size:12px;color:var(--cy);word-break:break-all;line-height:1.4;cursor:pointer;user-select:all;text-align:center}
+.linkBox:active{background:rgba(46,230,214,.1)}
+.linkBox .label{color:var(--mu);font-size:10px;font-family:system-ui;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px}
+.linkPanel .btnRow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.linkPanel button{padding:12px;border-radius:10px;border:none;font-weight:700;font-size:13px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.linkPanel button:active{transform:scale(.97)}
+.linkPanel button.primary{background:var(--cy);color:#04211f}
+.linkPanel button.secondary{background:var(--bg);border:1px solid var(--bd);color:var(--tx)}
+.linkPanel button.danger{background:rgba(255,77,94,.15);border:1px solid var(--rd);color:var(--rd)}
+
+.viewersBar{background:rgba(17,26,43,.6);border:1px solid var(--bd);border-radius:10px;padding:10px 14px;margin:0 12px 8px;display:flex;justify-content:space-between;align-items:center;font-size:12px;flex-shrink:0}
+.viewersBar b{color:var(--gn);font-size:16px;margin-right:4px}
+.viewersBar .status{color:var(--mu)}
+
+/* VIEWER VIEW */
+#viewerView{flex:1;display:flex;flex-direction:column;min-height:0}
+.viewerStage{flex:1;min-height:0;position:relative;background:#000;margin:8px 12px;border-radius:14px;overflow:hidden;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center}
+#remoteScreen{max-width:100%;max-height:100%;object-fit:contain;width:100%;height:100%}
+#viewerOverlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(8,12,20,.92);z-index:2;padding:24px;text-align:center}
+#viewerOverlay.hide{display:none}
+#viewerOverlay .spin{width:48px;height:48px;border:4px solid rgba(46,230,214,.2);border-top-color:var(--cy);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{100%{transform:rotate(360deg)}}
+#viewerOverlay p{font-size:14px;color:var(--tx);max-width:300px;line-height:1.5;font-weight:500}
+#viewerOverlay small{font-size:12px;color:var(--mu);max-width:300px;line-height:1.4}
+#viewerOverlay button{background:var(--gn);color:#04211f;border:none;padding:16px 32px;border-radius:12px;font-weight:800;font-size:16px;cursor:pointer;animation:glow 1.5s infinite;box-shadow:0 4px 20px rgba(52,211,153,.5)}
+@keyframes glow{0%,100%{box-shadow:0 4px 20px rgba(52,211,153,.5)}50%{box-shadow:0 4px 30px rgba(52,211,153,.9)}}
+
+.viewerControls{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 12px 8px;flex-shrink:0}
+.viewerControls button{padding:12px;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;border:none;display:flex;align-items:center;justify-content:center;gap:6px}
+.viewerControls button.primary{background:var(--cy);color:#04211f}
+.viewerControls button.danger{background:rgba(255,77,94,.15);border:1px solid var(--rd);color:var(--rd)}
+
+#viewerStatus{font-size:11px;color:var(--mu);text-align:center;padding:0 14px 4px;line-height:1.4;flex-shrink:0}
+#viewerDiag{font-size:10px;color:#4a5a75;font-family:ui-monospace,monospace;padding:0 14px max(10px,env(safe-area-inset-bottom));text-align:center;flex-shrink:0}
+
+/* TOAST */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);color:#04211f;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.5);pointer-events:none;animation:toastIn .3s ease-out}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     LANDING
+     ============================================================ -->
+<div id="landing">
+  <h1>
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    PARTAGE D'ÉCRAN
+  </h1>
+  <p class="sub">Partagez votre écran en direct par lien. Aucun compte, aucune installation.</p>
+  
+  <div class="choices">
+    <button class="host" id="btnHost">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 20h8M12 18v2"/><circle cx="12" cy="11" r="2.5" fill="currentColor"/></svg>
+      <div>PARTAGER MON ÉCRAN<small>Génère un lien à envoyer</small></div>
+    </button>
+    <button class="viewer" id="btnViewer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      <div>REJOINDRE UN PARTAGE<small>Via un lien reçu</small></div>
+    </button>
+  </div>
+  
+  <div class="manual">
+    <label for="manualId">Ou saisir l'ID manuellement</label>
+    <input id="manualId" placeholder="RADAR-XXXXXXXX" autocapitalize="characters" autocomplete="off" spellcheck="false">
+    <button id="btnManualJoin">Rejoindre cet ID</button>
+  </div>
+  
+  <div class="warn">⚠️ Le partage d'écran nécessite un PC (Windows/Mac/Linux). Sur mobile, l'émetteur utilisera la caméra à la place.</div>
+</div>
+
+<!-- ============================================================
+     HOST VIEW
+     ============================================================ -->
+<div id="hostView" class="hide">
+  <header>
+    <div class="brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 20h8M12 18v2"/></svg>PARTAGE</div>
+    <div class="badge"><span class="dot off" id="hostDot"></span><span id="hostLabel">Inactif</span></div>
+  </header>
+  
+  <div class="hostStage">
+    <video id="localPreview" autoplay playsinline muted></video>
+    <div class="previewOverlay" id="previewOverlay">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 20h8M12 18v2"/></svg>
+      <p>Cliquez sur le bouton pour commencer à partager votre écran</p>
+      <button id="btnStartShare">🖥️ Démarrer le partage</button>
+    </div>
+    <div class="liveBadge hide" id="liveBadge">EN DIRECT</div>
+  </div>
+  
+  <div class="linkPanel" id="linkPanel">
+    <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Lien à partager</h2>
+    <div class="linkBox" id="linkBox">
+      <span class="label">Cliquez pour copier</span>
+      <span id="linkText">En attente…</span>
+    </div>
+    <div class="btnRow">
+      <button class="primary" id="btnShareLink">📤 Partager</button>
+      <button class="secondary" id="btnCopyLink">📋 Copier</button>
+    </div>
+    <button class="danger" id="btnStopShare">⏹ Arrêter le partage</button>
+  </div>
+  
+  <div class="viewersBar">
+    <span><b id="viewerCount">0</b> spectateur(s) connecté(s)</span>
+    <span class="status" id="hostStatus">En attente…</span>
+  </div>
+</div>
+
+<!-- ============================================================
+     VIEWER VIEW
+     ============================================================ -->
+<div id="viewerView" class="hide">
+  <header>
+    <div class="brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>SPECTATEUR</div>
+    <div class="badge"><span class="dot off" id="viewerDot"></span><span id="viewerLabel">Déconnecté</span></div>
+  </header>
+  
+  <div class="viewerStage">
+    <video id="remoteScreen" autoplay playsinline muted></video>
+    <div id="viewerOverlay">
+      <div class="spin" id="viewerSpin"></div>
+      <p id="viewerOverlayMsg">Connexion en cours…</p>
+      <small id="viewerOverlaySub"></small>
+      <button id="btnActivateVideo" class="hide">▶ ACTIVER LA VIDÉO</button>
+    </div>
+  </div>
+  
+  <div class="viewerControls">
+    <button class="primary" id="btnFullscreen">🔍 Plein écran</button>
+    <button class="danger" id="btnLeave">⏹ Quitter</button>
+  </div>
+  
+  <div id="viewerStatus">Prêt</div>
+  <div id="viewerDiag" class="num">—</div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const show = el => el.classList.remove('hide');
+const hide = el => el.classList.add('hide');
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isAndroid = /Android/.test(navigator.userAgent);
+
+function toast(msg, type='info'){
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  el.style.background = type==='ok' ? 'var(--gn)' : type==='err' ? 'var(--rd)' : 'var(--cy)';
+  document.body.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); }, 2000);
+}
+
+async function copyToClipboard(text){
+  try{
+    await navigator.clipboard.writeText(text);
+    toast('Copié !', 'ok');
+    return true;
+  }catch(e){
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); toast('Copié !', 'ok'); return true; }
+    catch(e2){ toast('Échec copie', 'err'); return false; }
+    finally{ document.body.removeChild(ta); }
+  }
+}
+
+async function shareText(text, title='Partage d\'écran'){
+  if(navigator.share){
+    try{ await navigator.share({ title, text }); return true; }
+    catch(e){ if(e.name === 'AbortError') return false; }
+  }
+  return copyToClipboard(text);
+}
+
+/* Génération d'ID court avec préfixe SCREEN- */
+function generateScreenId(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for(let i = 0; i < 8; i++) s += chars[Math.floor(Math.random()*chars.length)];
+  return 'SCREEN-' + s;
+}
+
+/* Construction du lien de partage */
+function buildShareLink(id){
+  const base = location.origin + location.pathname;
+  return base + '#join=' + id;
+}
+
+/* Extraction de l'ID depuis le hash */
+function extractIdFromHash(){
+  const h = location.hash;
+  if(!h) return null;
+  const m = h.match(/join=([A-Z0-9-]+)/i);
+  return m ? m[1].toUpperCase() : null;
+}
+
+/* ============================================================
+   DÉTECTION AUTO AU CHARGEMENT
+   ============================================================ */
+window.addEventListener('load', () => {
+  const idFromHash = extractIdFromHash();
+  if(idFromHash){
+    /* Lien cliqué → mode viewer auto */
+    hide($('landing'));
+    show($('viewerView'));
+    $('viewerView').style.display = 'flex';
+    initViewer(idFromHash);
+  }
+});
+
+/* ============================================================
+   ROUTAGE
+   ============================================================ */
+$('btnHost').onclick = () => {
+  hide($('landing'));
+  show($('hostView'));
+  $('hostView').style.display = 'flex';
+  initHost();
+};
+
+$('btnViewer').onclick = () => {
+  const id = prompt('Collez le lien ou l\'ID reçu :');
+  if(!id) return;
+  let idToUse = id.trim();
+  /* Si c'est un lien complet, extraire l'ID */
+  const m = idToUse.match(/join=([A-Z0-9-]+)/i);
+  if(m) idToUse = m[1].toUpperCase();
+  if(!idToUse.toUpperCase().startsWith('SCREEN-')) idToUse = 'SCREEN-' + idToUse.toUpperCase();
+  
+  hide($('landing'));
+  show($('viewerView'));
+  $('viewerView').style.display = 'flex';
+  initViewer(idToUse);
+};
+
+$('btnManualJoin').onclick = () => {
+  let id = $('manualId').value.trim().toUpperCase();
+  if(!id) return;
+  if(!id.startsWith('SCREEN-')) id = 'SCREEN-' + id;
+  hide($('landing'));
+  show($('viewerView'));
+  $('viewerView').style.display = 'flex';
+  initViewer(id);
+};
+
+$('manualId').addEventListener('keydown', e => { if(e.key === 'Enter') $('btnManualJoin').click(); });
+
+/* ============================================================
+   HOST (partage d'écran)
+   ============================================================ */
+function initHost(){
+  const localPreview = $('localPreview');
+  const previewOverlay = $('previewOverlay');
+  const liveBadge = $('liveBadge');
+  
+  let peer = null;
+  let localStream = null;
+  let myId = generateScreenId();
+  let viewers = new Map();  /* viewerId → { call, conn } */
+  let sharing = false;
+  let startTime = 0;
+
+  /* Créer le peer dès l'arrivée */
+  function initPeer(){
+    if(peer) try{ peer.destroy(); }catch(e){}
+    
+    peer = new Peer(myId, {
+      debug: 2,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      }
+    });
+    
+    peer.on('open', id => {
+      console.log('[HOST] Peer open:', id);
+      updateLink();
+      $('hostDot').classList.remove('off');
+      $('hostLabel').textContent = 'Prêt';
+      $('hostStatus').textContent = 'En attente de spectateurs';
+    });
+    
+    peer.on('error', err => {
+      console.error('[HOST] Peer error:', err);
+      if(err.type === 'unavailable-id'){
+        myId = generateScreenId();
+        setTimeout(initPeer, 500);
+      }else{
+        $('hostDot').classList.add('off');
+        $('hostLabel').textContent = 'Erreur';
+        $('hostStatus').textContent = err.type;
+      }
+    });
+    
+    peer.on('disconnected', () => {
+      $('hostDot').classList.add('off');
+      $('hostLabel').textContent = 'Reconnexion…';
+      try{ peer.reconnect(); }catch(e){}
+    });
+    
+    /* Nouveau spectateur */
+    peer.on('connection', conn => {
+      console.log('[HOST] New viewer connection:', conn.peer);
+      
+      conn.on('open', () => {
+        console.log('[HOST] Data channel open with', conn.peer);
+        viewers.set(conn.peer, { conn, call: null, joinedAt: Date.now() });
+        updateViewerCount();
+        
+        /* Envoyer les infos */
+        try{
+          conn.send({ type: 'hello', hostId: myId, sharing });
+        }catch(e){}
+        
+        /* Si on partage déjà, envoyer immédiatement le stream */
+        if(sharing && localStream){
+          callViewer(conn.peer);
+        }
+      });
+      
+      conn.on('data', data => {
+        if(data && data.type === 'stop'){
+          removeViewer(conn.peer);
+        }
+      });
+      
+      conn.on('close', () => {
+        console.log('[HOST] Data channel closed with', conn.peer);
+        removeViewer(conn.peer);
+      });
+      
+      conn.on('error', err => {
+        console.error('[HOST] Data error:', err);
+      });
+    });
+  }
+  
+  /* Appeler un spectateur pour lui envoyer la vidéo */
+  function callViewer(viewerId){
+    if(!localStream || !peer) return;
+    
+    console.log('[HOST] Calling viewer:', viewerId);
+    
+    try{
+      const call = peer.call(viewerId, localStream);
+      if(!call){
+        console.error('[HOST] peer.call returned null');
+        return;
+      }
+      
+      const entry = viewers.get(viewerId);
+      if(entry) entry.call = call;
+      
+      call.on('close', () => {
+        console.log('[HOST] Call closed with', viewerId);
+        removeViewer(viewerId);
+      });
+      
+      call.on('error', err => {
+        console.error('[HOST] Call error:', err);
+      });
+      
+    }catch(e){
+      console.error('[HOST] callViewer failed:', e);
+    }
+  }
+  
+  function removeViewer(viewerId){
+    const entry = viewers.get(viewerId);
+    if(entry){
+      if(entry.call) try{ entry.call.close(); }catch(e){}
+      if(entry.conn) try{ entry.conn.close(); }catch(e){}
+      viewers.delete(viewerId);
+    }
+    updateViewerCount();
+  }
+  
+  function updateViewerCount(){
+    const n = viewers.size;
+    $('viewerCount').textContent = n;
+    if(n === 0){
+      $('hostStatus').textContent = sharing ? 'Personne ne regarde' : 'Prêt';
+    }else{
+      $('hostStatus').textContent = sharing ? 'Partage actif' : 'En attente';
+    }
+    $('hostLabel').textContent = n > 0 ? n + ' spectateur(s)' : (sharing ? 'Partage' : 'Prêt');
+  }
+  
+  function updateLink(){
+    const link = buildShareLink(myId);
+    $('linkText').textContent = link;
+  }
+  
+  /* === Démarrer le partage === */
+  async function startSharing(){
+    if(!navigator.mediaDevices){
+      toast('getUserMedia indisponible', 'err');
+      return;
+    }
+    
+    let stream = null;
+    let mode = 'screen';
+    
+    /* Essayer getDisplayMedia (écran) */
+    if(navigator.mediaDevices.getDisplayMedia && !isIOS){
+      try{
+        $('previewOverlay').innerHTML = '<p>Choisissez ce que vous voulez partager dans la popup…</p>';
+        
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { frameRate: { ideal: 30 } },
+          audio: false
+        });
+        console.log('[HOST] Screen sharing started');
+      }catch(e){
+        console.warn('[HOST] getDisplayMedia failed:', e.name);
+        /* Annulé par l'utilisateur ou pas supporté */
+        if(e.name === 'NotAllowedError' || e.name === 'AbortError'){
+          restorePreviewOverlay();
+          return;
+        }
+        stream = null;
+      }
+    }
+    
+    /* Fallback : caméra */
+    if(!stream){
+      try{
+        if(isIOS){
+          toast('iOS ne supporte pas le partage d\'écran — caméra utilisée', 'warn');
+        }
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
+          audio: false
+        });
+        mode = 'camera';
+      }catch(e){
+        toast('Caméra inaccessible : ' + e.message, 'err');
+        restorePreviewOverlay();
+        return;
+      }
+    }
+    
+    /* Stream prêt */
+    localStream = stream;
+    localPreview.srcObject = stream;
+    localPreview.muted = true;
+    await localPreview.play().catch(()=>{});
+    
+    sharing = true;
+    startTime = Date.now();
+    
+    hide(previewOverlay);
+    show(liveBadge);
+    liveBadge.textContent = mode === 'screen' ? 'ÉCRAN PARTAGÉ' : 'CAMÉRA';
+    
+    $('hostDot').classList.remove('off');
+    $('hostLabel').textContent = 'En direct';
+    $('hostStatus').textContent = 'En attente de spectateurs';
+    
+    /* Détecter l'arrêt depuis le navigateur */
+    const vTrack = stream.getVideoTracks()[0];
+    if(vTrack){
+      vTrack.onended = () => {
+        console.log('[HOST] User stopped sharing');
+        stopSharing();
+      };
+    }
+    
+    /* Appeler les spectateurs déjà connectés */
+    viewers.forEach((entry, viewerId) => {
+      if(!entry.call) callViewer(viewerId);
+    });
+    
+    toast(mode === 'screen' ? 'Partage d\'écran démarré' : 'Caméra démarrée', 'ok');
+  }
+  
+  function restorePreviewOverlay(){
+    previewOverlay.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 20h8M12 18v2"/></svg>
+      <p>Cliquez sur le bouton pour commencer à partager votre écran</p>
+      <button id="btnStartShare">🖥️ Démarrer le partage</button>
+    `;
+    $('btnStartShare').onclick = startSharing;
+    show(previewOverlay);
+  }
+  
+  /* === Arrêter le partage === */
+  function stopSharing(){
+    if(localStream){
+      localStream.getTracks().forEach(t => t.stop());
+      localStream = null;
+    }
+    localPreview.srcObject = null;
+    
+    /* Fermer tous les appels */
+    viewers.forEach((entry, viewerId) => {
+      if(entry.call) try{ entry.call.close(); }catch(e){}
+      entry.call = null;
+    });
+    
+    sharing = false;
+    hide(liveBadge);
+    show(previewOverlay);
+    
+    $('hostDot').classList.add('off');
+    $('hostLabel').textContent = 'Arrêté';
+    $('hostStatus').textContent = 'Partage arrêté';
+    
+    restorePreviewOverlay();
+    toast('Partage arrêté');
+  }
+  
+  /* Boutons */
+  $('btnStartShare').onclick = startSharing;
+  $('btnStopShare').onclick = stopSharing;
+  
+  $('btnCopyLink').onclick = () => copyToClipboard(buildShareLink(myId));
+  $('btnShareLink').onclick = () => shareText(buildShareLink(myId), 'Regarde mon écran en direct');
+  $('linkBox').onclick = () => copyToClipboard(buildShareLink(myId));
+  
+  /* Init */
+  initPeer();
+  
+  /* Retry si perte de connexion */
+  setInterval(() => {
+    if(peer && peer.disconnected && !peer.destroyed){
+      try{ peer.reconnect(); }catch(e){}
+    }
+  }, 5000);
+}
+
+/* ============================================================
+   VIEWER (regarde l'écran)
+   ============================================================ */
+function initViewer(hostId){
+  const remoteScreen = $('remoteScreen');
+  const overlay = $('viewerOverlay');
+  const overlayMsg = $('viewerOverlayMsg');
+  const overlaySub = $('viewerOverlaySub');
+  const btnActivate = $('btnActivateVideo');
+  const spinner = $('viewerSpin');
+  
+  remoteScreen.setAttribute('autoplay', '');
+  remoteScreen.setAttribute('playsinline', '');
+  remoteScreen.setAttribute('webkit-playsinline', '');
+  remoteScreen.muted = true;
+  remoteScreen.playsInline = true;
+  remoteScreen.autoplay = true;
+  
+  let peer = null;
+  let dataConn = null;
+  let currentCall = null;
+  let videoStarted = false;
+  let retryTimer = null;
+  let recvFrames = 0, recvFpsT = performance.now(), recvFps = 0;
+
+  function setOverlay(msg, sub='', showBtn=false){
+    overlayMsg.textContent = msg;
+    overlaySub.textContent = sub;
+    btnActivate.classList.toggle('hide', !showBtn);
+    spinner.style.display = showBtn ? 'none' : 'block';
+    overlay.classList.remove('hide');
+  }
+  
+  function hideOverlay(){
+    videoStarted = true;
+    overlay.classList.add('hide');
+    $('viewerDot').classList.remove('off');
+    $('viewerLabel').textContent = 'En direct';
+    $('viewerStatus').textContent = '✅ Connecté au partage';
+  }
+  
+  function tryPlay(forceShowBtn=false){
+    if(videoStarted) return;
+    if(!remoteScreen.srcObject) return;
+    if(!remoteScreen.srcObject.getVideoTracks().length) return;
+    
+    remoteScreen.muted = true;
+    const p = remoteScreen.play();
+    
+    if(p && p.then){
+      p.then(() => hideOverlay())
+       .catch(err => {
+         console.warn('[VIEWER] play() failed:', err.name);
+         if(err.name === 'NotAllowedError' || isIOS || forceShowBtn){
+           setOverlay('Touchez pour activer la vidéo', 'Vidéo bloquée par le navigateur', true);
+         }
+       });
+    } else {
+      hideOverlay();
+    }
+  }
+  
+  btnActivate.onclick = () => {
+    btnActivate.classList.add('hide');
+    remoteScreen.muted = true;
+    remoteScreen.play().then(() => hideOverlay())
+      .catch(err => setOverlay('Échec : ' + err.message, '', true));
+  };
+  
+  /* Connexion au host */
+  function connect(){
+    if(peer) try{ peer.destroy(); }catch(e){}
+    
+    console.log('[VIEWER] Connecting to', hostId);
+    
+    peer = new Peer(null, {
+      debug: 2,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      }
+    });
+    
+    peer.on('open', id => {
+      console.log('[VIEWER] Peer open, my id:', id, 'target:', hostId);
+      setOverlay('Connexion au partage…', 'Établissement du canal');
+      
+      /* Data channel */
+      dataConn = peer.connect(hostId, { reliable: true });
+      
+      dataConn.on('open', () => {
+        console.log('[VIEWER] Data channel open');
+        setOverlay('Connecté au canal', 'Attente du flux vidéo…');
+      });
+      
+      dataConn.on('data', data => {
+        if(data && data.type === 'hello'){
+          console.log('[VIEWER] Host says hello, sharing:', data.sharing);
+          if(!data.sharing){
+            setOverlay('Le partage n\'a pas encore démarré', 'L\'hôte doit cliquer sur "Démarrer"');
+          }else{
+            setOverlay('Le partage est actif', 'Réception de la vidéo…');
+          }
+        }
+      });
+      
+      dataConn.on('close', () => {
+        console.log('[VIEWER] Data channel closed');
+        updateViewerBadge('offline', 'Déconnecté');
+        setOverlay('Déconnecté du partage', 'Rechargez pour réessayer', false);
+      });
+      
+      dataConn.on('error', e => console.error('[VIEWER] Data error:', e));
+      
+      /* Auto-retry si pas de call après 3s */
+      clearTimeout(retryTimer);
+      retryTimer = setTimeout(() => {
+        if(!currentCall && !videoStarted){
+          console.log('[VIEWER] No call received after 3s, sending ping');
+          try{ dataConn.send({ type: 'ping' }); }catch(e){}
+        }
+      }, 3000);
+    });
+    
+    /* Réception de l'appel vidéo du host */
+    peer.on('call', call => {
+      console.log('[VIEWER] Incoming call from host');
+      currentCall = call;
+      
+      /* ⚠️ Android : answer avec MediaStream explicite */
+      const emptyStream = new MediaStream();
+      try{
+        call.answer(emptyStream);
+        console.log('[VIEWER] Call answered');
+      }catch(e){
+        try{ call.answer(); }catch(e2){ console.error('[VIEWER] answer failed:', e2); }
+      }
+      
+      setOverlay('Réception du flux…', 'Initialisation du lecteur');
+      
+      /* API moderne */
+      const pc = call.peerConnection;
+      if(pc){
+        pc.ontrack = (event) => {
+          console.log('[VIEWER] ontrack:', event.track.kind);
+          if(event.track.kind === 'video'){
+            const stream = event.streams[0] || new MediaStream([event.track]);
+            attachStream(stream, 'ontrack');
+          }
+        };
+        
+        /* Fallback ancien */
+        pc.onaddstream = (event) => {
+          console.log('[VIEWER] onaddstream (legacy)');
+          attachStream(event.stream, 'onaddstream');
+        };
+        
+        pc.oniceconnectionstatechange = () => {
+          console.log('[VIEWER] ICE:', pc.iceConnectionState);
+          if(pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed'){
+            /* Vérifier receivers */
+            pc.getReceivers().forEach(r => {
+              if(r.track && r.track.kind === 'video' && r.track.readyState === 'live'){
+                attachStream(new MediaStream([r.track]), 'receiver-pull');
+              }
+            });
+          }
+        };
+        
+        pc.onconnectionstatechange = () => {
+          console.log('[VIEWER] Conn:', pc.connectionState);
+          if(pc.connectionState === 'failed'){
+            setOverlay('Connexion échouée', 'Rechargez et réessayez', false);
+          }
+        };
+      }
+      
+      /* API PeerJS */
+      call.on('stream', remoteStream => {
+        console.log('[VIEWER] PeerJS stream event');
+        attachStream(remoteStream, 'peerjs-stream');
+      });
+      
+      call.on('close', () => {
+        console.log('[VIEWER] Call closed');
+        currentCall = null;
+        videoStarted = false;
+        updateViewerBadge('offline', 'Flux terminé');
+        setOverlay('Le partage est terminé', 'L\'hôte a arrêté', false);
+      });
+      
+      call.on('error', e => console.error('[VIEWER] Call error:', e));
+    });
+    
+    peer.on('error', err => {
+      console.error('[VIEWER] Peer error:', err);
+      updateViewerBadge('offline', 'Erreur');
+      
+      if(err.type === 'peer-unavailable'){
+        setOverlay('Hôte introuvable', 'Vérifiez que l\'hôte a bien lancé le partage', false);
+        $('viewerStatus').textContent = '❌ Hôte introuvable — vérifiez le lien';
+      }else{
+        setOverlay('Erreur : ' + err.type, err.message || '', false);
+      }
+    });
+    
+    peer.on('disconnected', () => {
+      updateViewerBadge('offline', 'Reconnexion…');
+      try{ peer.reconnect(); }catch(e){}
+    });
+  }
+  
+  /* Attacher le stream (Android-safe) */
+  function attachStream(stream, source){
+    if(!stream) return;
+    if(!stream.getVideoTracks().length){
+      console.log('[VIEWER] No video track in stream from', source);
+      return;
+    }
+    console.log('[VIEWER] Attaching stream from', source);
+    
+    /* Reset puis réassigner (bug Chrome Android) */
+    remoteScreen.srcObject = null;
+    setTimeout(() => {
+      remoteScreen.srcObject = stream;
+      remoteScreen.addEventListener('loadedmetadata', () => {
+        console.log('[VIEWER] Metadata:', remoteScreen.videoWidth, 'x', remoteScreen.videoHeight);
+        tryPlay();
+      }, { once: true });
+      
+      setTimeout(() => { if(!videoStarted) tryPlay(); }, 500);
+    }, 50);
+  }
+  
+  function updateViewerBadge(state, label){
+    const dot = $('viewerDot');
+    if(state === 'online') dot.classList.remove('off');
+    else dot.classList.add('off');
+    $('viewerLabel').textContent = label;
+  }
+  
+  /* Diagnostic */
+  setInterval(() => {
+    if(!remoteScreen.srcObject){
+      $('viewerDiag').textContent = 'Pas de flux · ' + overlayMsg.textContent;
+      return;
+    }
+    if(remoteScreen.readyState >= 2) recvFrames++;
+    if(performance.now() - recvFpsT > 1000){
+      recvFps = recvFrames;
+      recvFrames = 0;
+      recvFpsT = performance.now();
+    }
+    const w = remoteScreen.videoWidth, h = remoteScreen.videoHeight;
+    if(w && h){
+      $('viewerDiag').textContent = `${w}×${h} · ${recvFps}fps · ${remoteScreen.paused ? 'PAUSE' : 'LIVE'}`;
+    }else{
+      $('viewerDiag').textContent = `Piste:${remoteScreen.srcObject?'oui':'non'} · Dim:${w}×${h}`;
+    }
+    
+    /* Retry si piste présente mais pas playing */
+    if(w && h && remoteScreen.paused && !videoStarted){
+      tryPlay();
+    }
+  }, 1000);
+  
+  /* Boutons */
+  $('btnFullscreen').onclick = () => {
+    const el = document.querySelector('.viewerStage');
+    if(el.requestFullscreen){
+      el.requestFullscreen().catch(()=>{});
+    }else if(el.webkitRequestFullscreen){
+      el.webkitRequestFullscreen();
+    }else{
+      toast('Plein écran non supporté');
+    }
+  };
+  
+  $('btnLeave').onclick = () => {
+    if(currentCall) try{ currentCall.close(); }catch(e){}
+    if(dataConn) try{ dataConn.close(); }catch(e){}
+    if(peer) try{ peer.destroy(); }catch(e){}
+    location.hash = '';
+    location.reload();
+  };
+  
+  connect();
+  
+  /* Retry reconnexion */
+  setInterval(() => {
+    if(peer && peer.disconnected && !peer.destroyed){
+      try{ peer.reconnect(); }catch(e){}
+    }
+  }, 5000);
+}
+  
+})();
+</script>
+</body>
+</html>
