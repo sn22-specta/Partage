@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>CAMÉRA PARTAGÉE</title>
+<title>CAMÉRA PARTAGÉE + ENREGISTREMENT</title>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
 :root{--bg:#080c14;--pn:#111a2b;--bd:#22314d;--tx:#e5ecf6;--mu:#7a8aa6;--cy:#2ee6d6;--am:#ffb020;--rd:#ff4d5e;--gn:#34d399}
@@ -14,7 +14,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
 .hide{display:none!important}
 
 #landing{position:fixed;inset:0;background:radial-gradient(ellipse at top,#0f172a,#080c14);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:24px;z-index:100;text-align:center;overflow-y:auto}
-#landing h1{font-size:24px;font-weight:800;letter-spacing:.2em;color:var(--cy);display:flex;align-items:center;gap:12px}
+#landing h1{font-size:22px;font-weight:800;letter-spacing:.2em;color:var(--cy);display:flex;align-items:center;gap:12px;text-align:center}
 #landing .sub{color:var(--mu);max-width:340px;line-height:1.5;font-size:13px}
 #landing .choices{display:flex;flex-direction:column;gap:12px;width:100%;max-width:340px;margin-top:8px}
 #landing button{padding:18px;border-radius:14px;border:2px solid var(--bd);background:var(--pn);color:var(--tx);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:14px;transition:all .15s;text-align:left}
@@ -37,9 +37,8 @@ header{display:flex;justify-content:space-between;align-items:center;padding:max
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 @keyframes rec{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
 
-/* HOST */
-#hostView{flex:1;display:flex;flex-direction:column;min-height:0}
-.hostStage{flex:1;min-height:0;position:relative;background:#000;margin:8px 12px;border-radius:14px;overflow:hidden;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center}
+#hostView{flex:1;display:flex;flex-direction:column;min-height:0;overflow-y:auto}
+.hostStage{flex:1;min-height:200px;position:relative;background:#000;margin:8px 12px;border-radius:14px;overflow:hidden;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center}
 #remoteCam{max-width:100%;max-height:100%;object-fit:contain;width:100%;height:100%;background:#000}
 #hostOverlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(8,12,20,.92);z-index:2;padding:24px;text-align:center}
 #hostOverlay.hide{display:none}
@@ -47,8 +46,6 @@ header{display:flex;justify-content:space-between;align-items:center;padding:max
 @keyframes spin{100%{transform:rotate(360deg)}}
 #hostOverlay p{font-size:14px;color:var(--tx);max-width:300px;line-height:1.5;font-weight:500}
 #hostOverlay small{font-size:12px;color:var(--mu);max-width:300px;line-height:1.4}
-#hostOverlay button{background:var(--gn);color:#04211f;border:none;padding:14px 28px;border-radius:12px;font-weight:800;font-size:15px;cursor:pointer;animation:glow 1.5s infinite}
-@keyframes glow{0%,100%{box-shadow:0 4px 20px rgba(52,211,153,.5)}50%{box-shadow:0 4px 30px rgba(52,211,153,.9)}}
 
 .recBadge{position:absolute;top:10px;left:10px;background:rgba(255,77,94,.95);color:#fff;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:800;letter-spacing:1px;z-index:3;display:flex;align-items:center;gap:6px;animation:rec 1.5s infinite}
 .recBadge::before{content:'';width:8px;height:8px;background:#fff;border-radius:50%}
@@ -63,10 +60,51 @@ header{display:flex;justify-content:space-between;align-items:center;padding:max
 .linkPanel button.primary{background:var(--cy);color:#04211f}
 .linkPanel button.secondary{background:var(--bg);border:1px solid var(--bd);color:var(--tx)}
 
+/* === RECORDER PANEL === */
+.recPanel{background:var(--pn);border:1px solid var(--bd);border-radius:14px;padding:14px;margin:0 12px 8px;display:flex;flex-direction:column;gap:12px;flex-shrink:0}
+.recPanel h2{font-size:12px;color:var(--rd);font-weight:700;letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+.recPanel h2 svg{width:14px;height:14px}
+.recControls{display:flex;gap:8px;align-items:center}
+.recBtn{flex:1;padding:14px;border-radius:12px;border:none;background:var(--rd);color:#fff;font-weight:800;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s}
+.recBtn.recording{background:rgba(255,77,94,.25);border:2px solid var(--rd);color:var(--rd);animation:rec 1.5s infinite}
+.recTimer{font-family:ui-monospace,monospace;font-size:16px;font-weight:800;color:var(--rd);padding:0 12px;min-width:70px;text-align:center;display:flex;align-items:center;gap:6px}
+.recTimer::before{content:'';width:10px;height:10px;border-radius:50%;background:var(--rd);animation:rec 1s infinite}
+.recTimer.hide::before{display:none}
+.autoToggle{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--mu)}
+.autoToggle input[type=checkbox]{-webkit-appearance:none;appearance:none;width:40px;height:22px;background:var(--bg);border-radius:12px;position:relative;cursor:pointer;border:1px solid var(--bd);transition:all .2s;flex-shrink:0}
+.autoToggle input[type=checkbox]::before{content:'';position:absolute;width:16px;height:16px;background:var(--mu);border-radius:50%;top:2px;left:2px;transition:all .2s}
+.autoToggle input[type=checkbox]:checked{background:var(--rd);border-color:var(--rd)}
+.autoToggle input[type=checkbox]:checked::before{left:20px;background:#fff}
+
+.recordingsList{display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto}
+.rec-empty{padding:14px;text-align:center;font-size:12px;color:var(--mu);background:rgba(0,0,0,.2);border-radius:10px;border:1px dashed var(--bd)}
+.recItem{display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg);border:1px solid var(--bd);border-radius:10px}
+.recItem .thumb{width:60px;height:44px;background:#000;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--rd);flex-shrink:0;position:relative;overflow:hidden}
+.recItem .thumb::after{content:'▶';font-size:18px;color:rgba(255,255,255,.6)}
+.recItem .info{flex:1;min-width:0}
+.recItem .info .date{font-size:12px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recItem .info .meta{font-size:10px;color:var(--mu);font-family:ui-monospace,monospace;margin-top:2px}
+.recItem .actions{display:flex;gap:4px;flex-shrink:0}
+.recItem .actions button{width:34px;height:34px;border-radius:8px;border:none;background:var(--pn);color:var(--tx);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.recItem .actions button:active{transform:scale(.9)}
+.recItem .actions button.dl{color:var(--gn)}
+.recItem .actions button.del{color:var(--rd)}
+
+/* Modal player */
+#playerModal{position:fixed;inset:0;background:rgba(4,7,12,.96);z-index:200;display:none;flex-direction:column;padding:14px}
+#playerModal.show{display:flex}
+#playerModal .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+#playerModal .title{font-size:13px;font-weight:700;color:var(--cy);font-family:ui-monospace,monospace}
+#playerModal .close{background:var(--pn);border:1px solid var(--bd);color:var(--tx);width:36px;height:36px;border-radius:8px;font-size:18px;cursor:pointer}
+#playerModal video{flex:1;min-height:0;background:#000;border-radius:12px;outline:none}
+#playerModal .footer{margin-top:10px;display:flex;gap:8px}
+#playerModal .footer button{flex:1;padding:12px;border-radius:10px;border:none;font-weight:700;font-size:13px;cursor:pointer}
+#playerModal .footer .dl{background:var(--gn);color:#04211f}
+#playerModal .footer .close2{background:var(--pn);border:1px solid var(--bd);color:var(--tx)}
+
 .viewersBar{background:rgba(17,26,43,.6);border:1px solid var(--bd);border-radius:10px;padding:10px 14px;margin:0 12px max(10px,env(safe-area-inset-bottom));display:flex;justify-content:space-between;align-items:center;font-size:12px;flex-shrink:0}
 .viewersBar b{color:var(--gn);font-size:16px;margin-right:4px}
 
-/* VIEWER (celui qui partage sa caméra) */
 #viewerView{flex:1;display:flex;flex-direction:column;min-height:0}
 .shareNotice{background:rgba(255,176,32,.12);border:1px solid rgba(255,176,32,.4);border-radius:12px;margin:8px 12px;padding:14px;display:flex;flex-direction:column;gap:10px;flex-shrink:0}
 .shareNotice .title{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--am)}
@@ -78,20 +116,16 @@ header{display:flex;justify-content:space-between;align-items:center;padding:max
 .shareNotice button.accept{background:var(--gn);color:#04211f}
 .shareNotice button.refuse{background:rgba(255,77,94,.15);border:1px solid var(--rd);color:var(--rd)}
 .shareNotice button.accept:disabled{opacity:.4;cursor:not-allowed}
-
 .camPreview{flex:1;min-height:0;position:relative;background:#000;margin:8px 12px;border-radius:14px;overflow:hidden;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center}
 #localCam{max-width:100%;max-height:100%;object-fit:contain;width:100%;height:100%}
 #localCam.hide{visibility:hidden}
 .camPreview .placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(8,12,20,.9);color:var(--mu);text-align:center;padding:24px}
 .camPreview .placeholder svg{width:56px;height:56px;color:var(--mu);opacity:.5}
 .camPreview .placeholder p{font-size:13px;max-width:260px;line-height:1.5}
-
 .sharingBadge{position:absolute;top:10px;left:10px;background:rgba(52,211,153,.95);color:#04211f;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:800;letter-spacing:1px;display:flex;align-items:center;gap:6px}
 .sharingBadge::before{content:'';width:8px;height:8px;background:#04211f;border-radius:50%;animation:pulse 1s infinite}
-
 #viewerStatus{font-size:11px;color:var(--mu);text-align:center;padding:0 14px max(10px,env(safe-area-inset-bottom));line-height:1.4;flex-shrink:0}
 
-/* FULLSCREEN MODAL */
 #permModal{position:fixed;inset:0;z-index:200;background:rgba(4,7,12,.95);display:none;align-items:center;justify-content:center;padding:20px}
 #permModal.show{display:flex}
 #permModal .card{background:var(--pn);border:1px solid var(--bd);border-radius:16px;padding:24px;max-width:400px;width:100%;display:flex;flex-direction:column;gap:16px;text-align:center}
@@ -109,49 +143,44 @@ header{display:flex;justify-content:space-between;align-items:center;padding:max
 </head>
 <body>
 
-<!-- ============================================================
-     LANDING
-     ============================================================ -->
+<!-- LANDING -->
 <div id="landing">
   <h1>
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.5-4.5M15 14l4.5 4.5M21 8v8"/><rect x="2" y="6" width="13" height="12" rx="2"/></svg>
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.5-4.5M15 14l4.5 4.5"/><rect x="2" y="6" width="13" height="12" rx="2"/></svg>
     CAMÉRA PARTAGÉE
   </h1>
-  <p class="sub">Partagez votre caméra en direct via un lien. Comme Google Meet ou WhatsApp Video.</p>
-  
+  <p class="sub">Partagez votre caméra en direct via un lien. Enregistrez avec date et heure automatiques.</p>
   <div class="choices">
     <button class="host" id="btnHost">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-      <div>VOIR UNE CAMÉRA<small>Recevoir le flux de quelqu'un</small></div>
+      <div>VOIR UNE CAMÉRA<small>Recevoir + enregistrer</small></div>
     </button>
     <button class="viewer" id="btnViewer">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.5-4.5M15 14l4.5 4.5"/><rect x="2" y="6" width="13" height="12" rx="2"/></svg>
       <div>PARTAGER MA CAMÉRA<small>Envoyer ma caméra à quelqu'un</small></div>
     </button>
   </div>
-  
-  <div class="warn">✅ Transparence totale : la personne qui partage sa caméra voit un bandeau <b>"CAMÉRA PARTAGÉE"</b> et peut arrêter à tout moment.</div>
+  <div class="warn">✅ Transparence totale : la personne qui partage voit son aperçu et peut arrêter à tout moment. Les enregistrements restent sur le téléphone du spectateur.</div>
 </div>
 
-<!-- ============================================================
-     HOST VIEW (voit la caméra de l'autre)
-     ============================================================ -->
+<!-- HOST VIEW -->
 <div id="hostView" class="hide">
   <header>
     <div class="brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>SPECTATEUR</div>
     <div class="badge"><span class="dot off" id="hostDot"></span><span id="hostLabel">En attente</span></div>
   </header>
-  
+
   <div class="hostStage">
     <video id="remoteCam" autoplay playsinline muted></video>
     <div id="hostOverlay">
-      <div class="spin" id="hostSpin"></div>
+      <div class="spin"></div>
       <p id="hostOverlayMsg">En attente de la connexion…</p>
       <small id="hostOverlaySub">Envoyez le lien ci-dessous</small>
     </div>
     <div class="recBadge hide" id="recBadge">CAMÉRA LIVE</div>
   </div>
-  
+
+  <!-- Link -->
   <div class="linkPanel">
     <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Lien à partager</h2>
     <div class="linkBox" id="linkBox">
@@ -163,30 +192,44 @@ header{display:flex;justify-content:space-between;align-items:center;padding:max
       <button class="secondary" id="btnCopyLink">📋 Copier</button>
     </div>
   </div>
-  
+
+  <!-- Recorder -->
+  <div class="recPanel">
+    <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>Enregistrement</h2>
+    <div class="recControls">
+      <button class="recBtn" id="btnRecord" disabled>● Enregistrer</button>
+      <div class="recTimer hide" id="recTimer">00:00</div>
+    </div>
+    <div class="autoToggle">
+      <span>Démarrer automatiquement à la connexion</span>
+      <input type="checkbox" id="autoRecord">
+    </div>
+    <div class="recordingsList" id="recordingsList">
+      <div class="rec-empty">Aucun enregistrement — la caméra doit être connectée pour enregistrer.</div>
+    </div>
+  </div>
+
   <div class="viewersBar">
     <span><b id="viewerCount">0</b> caméra(s) connectée(s)</span>
     <span id="hostStatus">En attente…</span>
   </div>
 </div>
 
-<!-- ============================================================
-     VIEWER VIEW (partage sa caméra)
-     ============================================================ -->
+<!-- VIEWER VIEW -->
 <div id="viewerView" class="hide">
   <header>
     <div class="brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.5-4.5M15 14l4.5 4.5"/><rect x="2" y="6" width="13" height="12" rx="2"/></svg>MA CAMÉRA</div>
     <div class="badge"><span class="dot off" id="viewerDot"></span><span id="viewerLabel">Non connecté</span></div>
   </header>
-  
+
   <div class="shareNotice" id="shareNotice">
     <div class="title">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
       Vous allez partager votre caméra
     </div>
-    <p><b id="hostNameLabel">Un utilisateur</b> demande à voir votre caméra. Si vous acceptez, il verra ce que vous filmez jusqu'à ce que vous arrêtiez.</p>
+    <p><b id="hostIdLabel">Un utilisateur</b> demande à voir votre caméra. Votre flux sera visible et pourra être enregistré jusqu'à ce que vous arrêtiez.</p>
     <div class="hostInfo">
-      <span>👤 <b id="hostIdLabel">…</b></span>
+      <span>👤 <b id="hostIdLabel2">…</b></span>
       <span id="shareTimer">—</span>
     </div>
     <div class="actions" id="shareActions">
@@ -194,7 +237,7 @@ header{display:flex;justify-content:space-between;align-items:center;padding:max
       <button class="refuse" id="btnRefuseShare">❌ Refuser</button>
     </div>
   </div>
-  
+
   <div class="camPreview">
     <video id="localCam" autoplay playsinline muted class="hide"></video>
     <div class="placeholder" id="camPlaceholder">
@@ -203,23 +246,34 @@ header{display:flex;justify-content:space-between;align-items:center;padding:max
     </div>
     <div class="sharingBadge hide" id="sharingBadge">🟢 CAMÉRA PARTAGÉE</div>
   </div>
-  
+
   <div id="viewerStatus">Prêt — en attente de votre décision</div>
 </div>
 
-<!-- ============================================================
-     MODAL DE PERMISSION
-     ============================================================ -->
+<!-- Modal permission -->
 <div id="permModal">
   <div class="card">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.5-4.5M15 14l4.5 4.5"/><rect x="2" y="6" width="13" height="12" rx="2"/></svg>
     <h2>Autoriser la caméra ?</h2>
     <p>Pour partager votre caméra, votre navigateur va vous demander l'autorisation. Cliquez sur <b>"Autoriser"</b>.</p>
-    <p style="font-size:11px;color:var(--am)">⚠️ Un voyant vert apparaîtra sur votre appareil pendant tout le partage. C'est normal.</p>
+    <p style="font-size:11px;color:var(--am)">⚠️ Un voyant vert apparaîtra pendant tout le partage.</p>
     <div class="btns">
       <button class="accept" id="btnPermAccept">Autoriser et démarrer</button>
       <button class="refuse" id="btnPermRefuse">Annuler</button>
     </div>
+  </div>
+</div>
+
+<!-- Modal player -->
+<div id="playerModal">
+  <div class="header">
+    <span class="title" id="playerTitle">Enregistrement</span>
+    <button class="close" id="playerClose">✕</button>
+  </div>
+  <video id="playerVideo" controls playsinline></video>
+  <div class="footer">
+    <button class="dl" id="playerDownload">⬇ Télécharger</button>
+    <button class="close2" id="playerClose2">Fermer</button>
   </div>
 </div>
 
@@ -230,7 +284,6 @@ header{display:flex;justify-content:space-between;align-items:center;padding:max
 const $ = id => document.getElementById(id);
 const show = el => el.classList.remove('hide');
 const hide = el => el.classList.add('hide');
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
 function toast(msg, type='info'){
   const el = document.createElement('div');
@@ -268,24 +321,26 @@ function generateId(){
   return 'CAM-' + s;
 }
 
-function buildLink(id){
-  return location.origin + location.pathname + '#view=' + id;
-}
-
+function buildLink(id){ return location.origin + location.pathname + '#view=' + id; }
 function extractIdFromHash(){
-  const h = location.hash;
-  if(!h) return null;
+  const h = location.hash; if(!h) return null;
   const m = h.match(/view=([A-Z0-9-]+)/i);
   return m ? m[1].toUpperCase() : null;
 }
 
-/* ============================================================
-   AUTO-DÉTECTION AU CHARGEMENT
-   ============================================================ */
+function formatDuration(sec){
+  const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+  return `${m}:${s.toString().padStart(2,'0')}`;
+}
+function formatSize(bytes){
+  if(bytes < 1024) return bytes + ' o';
+  if(bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' Ko';
+  return (bytes/1024/1024).toFixed(1) + ' Mo';
+}
+
 window.addEventListener('load', () => {
   const id = extractIdFromHash();
   if(id){
-    /* Lien cliqué → mode partage de caméra avec consentement */
     hide($('landing'));
     show($('viewerView'));
     $('viewerView').style.display = 'flex';
@@ -293,39 +348,29 @@ window.addEventListener('load', () => {
   }
 });
 
-/* ============================================================
-   ROUTAGE
-   ============================================================ */
 $('btnHost').onclick = () => {
-  hide($('landing'));
-  show($('hostView'));
-  $('hostView').style.display = 'flex';
-  initHost();
+  hide($('landing')); show($('hostView'));
+  $('hostView').style.display = 'flex'; initHost();
 };
-
 $('btnViewer').onclick = () => {
   const id = prompt('Collez le lien ou l\'ID reçu :');
   if(!id) return;
-  let idToUse = id.trim();
-  const m = idToUse.match(/view=([A-Z0-9-]+)/i);
-  if(m) idToUse = m[1].toUpperCase();
-  if(!idToUse.toUpperCase().startsWith('CAM-')) idToUse = 'CAM-' + idToUse.toUpperCase();
-  
-  hide($('landing'));
-  show($('viewerView'));
-  $('viewerView').style.display = 'flex';
-  initViewer(idToUse);
+  let v = id.trim();
+  const m = v.match(/view=([A-Z0-9-]+)/i);
+  if(m) v = m[1].toUpperCase();
+  if(!v.toUpperCase().startsWith('CAM-')) v = 'CAM-' + v.toUpperCase();
+  hide($('landing')); show($('viewerView'));
+  $('viewerView').style.display = 'flex'; initViewer(v);
 };
 
 /* ============================================================
-   HOST (voit la caméra de l'autre)
+   HOST — avec enregistrement horodaté
    ============================================================ */
 function initHost(){
   const remoteCam = $('remoteCam');
   const overlay = $('hostOverlay');
   const overlayMsg = $('hostOverlayMsg');
   const overlaySub = $('hostOverlaySub');
-  const spin = $('hostSpin');
   const recBadge = $('recBadge');
   
   remoteCam.setAttribute('autoplay', '');
@@ -340,15 +385,25 @@ function initHost(){
   let currentCall = null;
   let videoStarted = false;
   let recvFrames = 0, recvFpsT = performance.now(), recvFps = 0;
-  let retryTimer = null;
-
+  
+  /* Enregistrement */
+  let mediaRecorder = null;
+  let recordedChunks = [];
+  let recordings = [];
+  let composeCanvas = null;
+  let composeCtx = null;
+  let recordingStartTime = 0;
+  let recordingInterval = null;
+  let drawLoopId = null;
+  let isRecording = false;
+  let autoRecordEnabled = false;
+  
   function setOverlay(msg, sub='', showSpin=true){
     overlayMsg.textContent = msg;
     overlaySub.textContent = sub;
-    spin.style.display = showSpin ? 'block' : 'none';
+    overlay.querySelector('.spin').style.display = showSpin ? 'block' : 'none';
     overlay.classList.remove('hide');
   }
-  
   function hideOverlay(){
     videoStarted = true;
     overlay.classList.add('hide');
@@ -358,47 +413,39 @@ function initHost(){
     $('hostLabel').textContent = 'EN DIRECT';
     $('hostStatus').textContent = '✅ Caméra connectée';
     $('viewerCount').textContent = '1';
+    $('btnRecord').disabled = false;
+    if(autoRecordEnabled){
+      setTimeout(() => { if(!isRecording) startRecording(); }, 800);
+    }
   }
-  
-  function tryPlay(force=false){
+  function tryPlay(){
     if(videoStarted) return;
     if(!remoteCam.srcObject) return;
     if(!remoteCam.srcObject.getVideoTracks().length) return;
-    
     remoteCam.muted = true;
-    const p = remoteCam.play();
-    if(p && p.then){
-      p.then(() => hideOverlay()).catch(err => {
-        console.warn('[HOST] play failed:', err.name);
-        if(err.name === 'NotAllowedError' || force){
-          setOverlay('Touchez pour activer la vidéo', 'Le navigateur bloque la lecture auto', false);
-          overlay.style.pointerEvents = 'auto';
-          overlay.onclick = () => {
-            remoteCam.muted = true;
-            remoteCam.play().then(() => hideOverlay()).catch(()=>{});
-          };
-        }
-      });
-    } else {
-      hideOverlay();
-    }
+    remoteCam.play().then(() => hideOverlay()).catch(err => {
+      console.warn('play failed:', err.name);
+      if(err.name === 'NotAllowedError'){
+        setOverlay('Touchez pour activer la vidéo', '', false);
+        overlay.style.pointerEvents = 'auto';
+        overlay.onclick = () => {
+          remoteCam.play().then(() => hideOverlay()).catch(()=>{});
+        };
+      }
+    });
   }
   
   function initPeer(){
     if(peer) try{ peer.destroy(); }catch(e){}
-    
     peer = new Peer(myId, {
       debug: 2,
-      config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' }
-        ]
-      }
+      config: { iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+      ]}
     });
     
     peer.on('open', id => {
-      console.log('[HOST] Peer open:', id);
       $('linkText').textContent = buildLink(id);
       $('hostDot').classList.remove('off');
       $('hostLabel').textContent = 'Prêt';
@@ -407,14 +454,8 @@ function initHost(){
     
     peer.on('error', err => {
       console.error('[HOST] Peer error:', err);
-      if(err.type === 'unavailable-id'){
-        myId = generateId();
-        setTimeout(initPeer, 500);
-      }else{
-        $('hostDot').classList.add('off');
-        $('hostLabel').textContent = 'Erreur';
-        setOverlay('Erreur : ' + err.type, err.message || '');
-      }
+      if(err.type === 'unavailable-id'){ myId = generateId(); setTimeout(initPeer, 500); }
+      else { $('hostDot').classList.add('off'); $('hostLabel').textContent = 'Erreur'; }
     });
     
     peer.on('disconnected', () => {
@@ -423,84 +464,47 @@ function initHost(){
       try{ peer.reconnect(); }catch(e){}
     });
     
-    /* Un viewer se connecte */
     peer.on('connection', conn => {
-      console.log('[HOST] Viewer connected:', conn.peer);
       activeViewer = conn;
-      
-      conn.on('open', () => {
-        try{ conn.send({ type: 'hello', hostId: myId }); }catch(e){}
-        setOverlay('Caméra connectée', 'En attente de la vidéo…');
-      });
-      
+      conn.on('open', () => { try{ conn.send({ type: 'hello', hostId: myId }); }catch(e){} });
       conn.on('data', data => {
-        if(data && data.type === 'sharing'){
-          console.log('[HOST] Viewer confirms sharing');
-          setOverlay('Caméra en cours d\'activation…', 'Presque prêt');
-        }
-        if(data && data.type === 'stopped'){
-          console.log('[HOST] Viewer stopped sharing');
-          onViewerStopped();
-        }
+        if(data && data.type === 'stopped') onViewerStopped();
       });
-      
-      conn.on('close', () => {
-        console.log('[HOST] Viewer disconnected');
-        onViewerStopped();
-      });
-      
-      conn.on('error', e => console.error('[HOST] Data error:', e));
+      conn.on('close', () => onViewerStopped());
     });
     
-    /* Le viewer nous envoie la vidéo */
     peer.on('call', call => {
-      console.log('[HOST] Incoming video call');
       currentCall = call;
-      
       const empty = new MediaStream();
-      try{ call.answer(empty); }
-      catch(e){ try{ call.answer(); }catch(e2){} }
-      
+      try{ call.answer(empty); } catch(e){ try{ call.answer(); }catch(e2){} }
       setOverlay('Réception du flux vidéo…', 'Initialisation');
       
       const pc = call.peerConnection;
       if(pc){
         pc.ontrack = (event) => {
-          console.log('[HOST] ontrack:', event.track.kind);
           if(event.track.kind === 'video'){
             const stream = event.streams[0] || new MediaStream([event.track]);
-            attachStream(stream, 'ontrack');
+            attachStream(stream);
           }
         };
-        pc.onaddstream = (event) => {
-          attachStream(event.stream, 'onaddstream');
-        };
+        pc.onaddstream = (event) => attachStream(event.stream);
         pc.oniceconnectionstatechange = () => {
           if(pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed'){
             pc.getReceivers().forEach(r => {
               if(r.track && r.track.kind === 'video' && r.track.readyState === 'live'){
-                attachStream(new MediaStream([r.track]), 'receiver');
+                attachStream(new MediaStream([r.track]));
               }
             });
           }
         };
       }
-      
-      call.on('stream', stream => attachStream(stream, 'peerjs-stream'));
-      
-      call.on('close', () => {
-        console.log('[HOST] Call closed');
-        onViewerStopped();
-      });
-      
-      call.on('error', e => console.error('[HOST] Call error:', e));
+      call.on('stream', s => attachStream(s));
+      call.on('close', () => onViewerStopped());
     });
   }
   
-  function attachStream(stream, source){
+  function attachStream(stream){
     if(!stream || !stream.getVideoTracks().length) return;
-    console.log('[HOST] Attaching from', source);
-    
     remoteCam.srcObject = null;
     setTimeout(() => {
       remoteCam.srcObject = stream;
@@ -510,6 +514,7 @@ function initHost(){
   }
   
   function onViewerStopped(){
+    if(isRecording) stopRecording();
     videoStarted = false;
     currentCall = null;
     remoteCam.srcObject = null;
@@ -519,49 +524,286 @@ function initHost(){
     $('hostLabel').textContent = 'Déconnecté';
     $('hostStatus').textContent = 'Le partage est terminé';
     $('viewerCount').textContent = '0';
+    $('btnRecord').disabled = true;
     setOverlay('Le partage est terminé', 'En attente d\'une nouvelle connexion');
   }
+  
+  /* ============================================================
+     ENREGISTREMENT AVEC DATE/HEURE INCRUSTÉES
+     ============================================================ */
+  function pickMimeType(){
+    const types = [
+      'video/webm;codecs=vp9',
+      'video/webm;codecs=vp8',
+      'video/webm',
+      'video/mp4'
+    ];
+    for(const t of types){
+      if(window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) return t;
+    }
+    return '';
+  }
+  
+  function drawTimestamp(ctx, w, h){
+    const now = new Date();
+    const pad2 = n => n.toString().padStart(2, '0');
+    const dateStr = `${pad2(now.getDate())}/${pad2(now.getMonth()+1)}/${now.getFullYear()}`;
+    const timeStr = `${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())}`;
+    const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+    const durStr = `${pad2(Math.floor(elapsed/60))}:${pad2(elapsed%60)}`;
+    
+    const baseSize = Math.max(14, Math.floor(h / 26));
+    const pad = Math.max(8, Math.floor(baseSize * 0.5));
+    
+    /* Bandeau haut */
+    const bannerH = baseSize * 2.4;
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(0, 0, w, bannerH);
+    ctx.fillStyle = 'rgba(255,77,94,0.9)';
+    ctx.fillRect(0, 0, w, 3);
+    
+    /* Date et heure */
+    ctx.font = `700 ${baseSize}px ui-monospace, monospace`;
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'left';
+    ctx.fillText('📅 ' + dateStr, pad, bannerH / 2 - baseSize * 0.35);
+    
+    ctx.textAlign = 'right';
+    ctx.fillText('🕐 ' + timeStr, w - pad, bannerH / 2 - baseSize * 0.35);
+    
+    /* REC + chrono */
+    ctx.font = `700 ${Math.floor(baseSize * 0.85)}px ui-monospace, monospace`;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#ff4d5e';
+    ctx.fillText('● REC', pad, bannerH / 2 + baseSize * 0.55);
+    
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#ff4d5e';
+    ctx.fillText(durStr, w - pad, bannerH / 2 + baseSize * 0.55);
+    
+    /* Filigrane bas */
+    ctx.textAlign = 'center';
+    ctx.font = `600 ${Math.floor(baseSize * 0.7)}px system-ui`;
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillText('CAMÉRA PARTAGÉE — ' + myId, w/2, h - pad);
+  }
+  
+  function startRecording(){
+    if(isRecording) return;
+    if(!remoteCam.srcObject || !remoteCam.videoWidth){
+      toast('Caméra pas encore prête', 'err');
+      return;
+    }
+    if(!window.MediaRecorder){
+      toast('Enregistrement non supporté par ce navigateur', 'err');
+      return;
+    }
+    
+    const w = remoteCam.videoWidth;
+    const h = remoteCam.videoHeight;
+    if(!w || !h){ toast('Dimensions vidéo inconnues', 'err'); return; }
+    
+    composeCanvas = document.createElement('canvas');
+    composeCanvas.width = w;
+    composeCanvas.height = h;
+    composeCtx = composeCanvas.getContext('2d');
+    
+    function drawLoop(){
+      if(!isRecording) return;
+      composeCtx.drawImage(remoteCam, 0, 0, w, h);
+      drawTimestamp(composeCtx, w, h);
+      drawLoopId = requestAnimationFrame(drawLoop);
+    }
+    
+    recordingStartTime = Date.now();
+    isRecording = true;
+    drawLoop();
+    
+    const canvasStream = composeCanvas.captureStream(30);
+    const mimeType = pickMimeType();
+    try{
+      mediaRecorder = new MediaRecorder(canvasStream, mimeType
+        ? { mimeType, videoBitsPerSecond: 2500000 }
+        : { videoBitsPerSecond: 2500000 }
+      );
+    }catch(e){
+      console.error('MediaRecorder error:', e);
+      toast('Impossible de démarrer l\'enregistrement', 'err');
+      isRecording = false;
+      cancelAnimationFrame(drawLoopId);
+      return;
+    }
+    
+    recordedChunks = [];
+    mediaRecorder.ondataavailable = e => { if(e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      const actualMime = mediaRecorder.mimeType || mimeType || 'video/webm';
+      const blob = new Blob(recordedChunks, { type: actualMime });
+      const url = URL.createObjectURL(blob);
+      const duration = (Date.now() - recordingStartTime) / 1000;
+      const startDate = new Date(recordingStartTime);
+      
+      recordings.unshift({
+        id: Date.now() + Math.random(),
+        blob, url, duration, startDate,
+        size: blob.size,
+        mimeType: actualMime
+      });
+      renderRecordings();
+      toast('Enregistrement sauvegardé (' + formatSize(blob.size) + ')', 'ok');
+    };
+    
+    mediaRecorder.start(1000);
+    
+    /* UI */
+    $('btnRecord').textContent = '⏹ Arrêter l\'enregistrement';
+    $('btnRecord').classList.add('recording');
+    $('recTimer').classList.remove('hide');
+    startRecTimer();
+  }
+  
+  function stopRecording(){
+    if(!isRecording) return;
+    isRecording = false;
+    try{ if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop(); }catch(e){}
+    cancelAnimationFrame(drawLoopId);
+    stopRecTimer();
+    $('btnRecord').textContent = '● Enregistrer';
+    $('btnRecord').classList.remove('recording');
+  }
+  
+  function startRecTimer(){
+    const tick = () => {
+      const sec = Math.floor((Date.now() - recordingStartTime) / 1000);
+      $('recTimer').textContent = formatDuration(sec);
+    };
+    tick();
+    recordingInterval = setInterval(tick, 500);
+  }
+  function stopRecTimer(){
+    if(recordingInterval) clearInterval(recordingInterval);
+    recordingInterval = null;
+    $('recTimer').textContent = '00:00';
+    $('recTimer').classList.add('hide');
+  }
+  
+  function renderRecordings(){
+    const list = $('recordingsList');
+    if(!recordings.length){
+      list.innerHTML = '<div class="rec-empty">Aucun enregistrement — la caméra doit être connectée pour enregistrer.</div>';
+      return;
+    }
+    list.innerHTML = recordings.map(r => {
+      const date = r.startDate.toLocaleDateString('fr-FR');
+      const time = r.startDate.toLocaleTimeString('fr-FR');
+      return `<div class="recItem" data-id="${r.id}">
+        <div class="thumb"></div>
+        <div class="info">
+          <div class="date">📅 ${date} — 🕐 ${time}</div>
+          <div class="meta">⏱ ${formatDuration(r.duration)} · 💾 ${formatSize(r.size)}</div>
+        </div>
+        <div class="actions">
+          <button class="play" data-action="play">▶</button>
+          <button class="dl" data-action="download">⬇</button>
+          <button class="del" data-action="delete">✕</button>
+        </div>
+      </div>`;
+    }).join('');
+    
+    list.querySelectorAll('[data-action]').forEach(btn => {
+      btn.onclick = e => {
+        e.stopPropagation();
+        const id = btn.closest('.recItem').dataset.id;
+        const rec = recordings.find(r => String(r.id) === String(id));
+        if(!rec) return;
+        const action = btn.dataset.action;
+        if(action === 'play') openPlayer(rec);
+        else if(action === 'download') downloadRecording(rec);
+        else if(action === 'delete') deleteRecording(rec);
+      };
+    });
+  }
+  
+  function downloadRecording(rec){
+    const d = rec.startDate;
+    const p = n => n.toString().padStart(2, '0');
+    const fileName = `camera-${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}.webm`;
+    const a = document.createElement('a');
+    a.href = rec.url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast('Téléchargement : ' + fileName, 'ok');
+  }
+  
+  function openPlayer(rec){
+    const d = rec.startDate;
+    $('playerTitle').textContent = '📅 ' + d.toLocaleDateString('fr-FR') + ' — 🕐 ' + d.toLocaleTimeString('fr-FR');
+    $('playerVideo').src = rec.url;
+    $('playerModal').classList.add('show');
+    $('playerVideo').play().catch(()=>{});
+    $('playerDownload').onclick = () => downloadRecording(rec);
+  }
+  
+  function deleteRecording(rec){
+    if(!confirm('Supprimer cet enregistrement ?')) return;
+    try{ URL.revokeObjectURL(rec.url); }catch(e){}
+    recordings = recordings.filter(r => r.id !== rec.id);
+    renderRecordings();
+    toast('Supprimé');
+  }
+  
+  $('btnRecord').onclick = () => {
+    if(isRecording) stopRecording();
+    else startRecording();
+  };
+  
+  $('autoRecord').onchange = e => {
+    autoRecordEnabled = e.target.checked;
+    if(autoRecordEnabled && videoStarted && !isRecording){
+      setTimeout(startRecording, 300);
+    }
+  };
+  
+  $('playerClose').onclick = $('playerClose2').onclick = () => {
+    $('playerModal').classList.remove('show');
+    $('playerVideo').pause();
+    $('playerVideo').src = '';
+  };
   
   $('btnCopyLink').onclick = () => copyToClipboard(buildLink(myId));
   $('btnShareLink').onclick = () => shareText(buildLink(myId), 'Regarde ma caméra en direct');
   $('linkBox').onclick = () => copyToClipboard(buildLink(myId));
   
   initPeer();
-  
   setInterval(() => {
-    if(peer && peer.disconnected && !peer.destroyed){
-      try{ peer.reconnect(); }catch(e){}
-    }
+    if(peer && peer.disconnected && !peer.destroyed) try{ peer.reconnect(); }catch(e){}
   }, 5000);
   
-  /* Diagnostic */
   setInterval(() => {
     if(!remoteCam.srcObject) return;
     if(remoteCam.readyState >= 2) recvFrames++;
     if(performance.now() - recvFpsT > 1000){
-      recvFps = recvFrames;
-      recvFrames = 0;
-      recvFpsT = performance.now();
+      recvFps = recvFrames; recvFrames = 0; recvFpsT = performance.now();
     }
     const w = remoteCam.videoWidth, h = remoteCam.videoHeight;
-    if(w && h){
+    if(w && h && !isRecording){
       $('hostStatus').textContent = `${w}×${h} · ${recvFps}fps · LIVE`;
     }
-    if(w && h && remoteCam.paused && !videoStarted){
-      tryPlay();
-    }
+    if(w && h && remoteCam.paused && !videoStarted) tryPlay();
   }, 1000);
 }
 
 /* ============================================================
-   VIEWER (partage sa caméra)
+   VIEWER — partage sa caméra
    ============================================================ */
 function initViewer(hostId){
   const localCam = $('localCam');
   const placeholder = $('camPlaceholder');
   const sharingBadge = $('sharingBadge');
   const notice = $('shareNotice');
-  const hostIdLabel = $('hostIdLabel');
   const shareTimer = $('shareTimer');
   
   localCam.setAttribute('autoplay', '');
@@ -577,49 +819,31 @@ function initViewer(hostId){
   let sharing = false;
   let shareStartTime = 0;
   let timerInterval = null;
-  let isInitiator = false;
   
-  hostIdLabel.textContent = hostId;
+  $('hostIdLabel').textContent = hostId;
+  $('hostIdLabel2').textContent = hostId;
   
   function setStatus(msg, color){
     $('viewerStatus').textContent = msg;
     $('viewerStatus').style.color = color || 'var(--mu)';
   }
   
-  /* Connexion au host */
   function connect(){
     if(peer) try{ peer.destroy(); }catch(e){}
-    
     peer = new Peer(null, {
       debug: 2,
-      config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' }
-        ]
-      }
+      config: { iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+      ]}
     });
     
-    peer.on('open', id => {
-      console.log('[VIEWER] My id:', id, 'Target:', hostId);
+    peer.on('open', () => {
       $('viewerDot').classList.remove('off');
       $('viewerLabel').textContent = 'Connecté au host';
-      setStatus('✅ Connecté au host — en attente de votre décision', 'var(--gn)');
-      
-      /* Se connecter au host */
+      setStatus('✅ Connecté — en attente de votre décision', 'var(--gn)');
       dataConn = peer.connect(hostId, { reliable: true });
-      
-      dataConn.on('open', () => {
-        console.log('[VIEWER] Data channel open');
-        try{ dataConn.send({ type: 'hello' }); }catch(e){}
-      });
-      
-      dataConn.on('data', data => {
-        if(data && data.type === 'hello'){
-          console.log('[VIEWER] Host says hello');
-        }
-      });
-      
+      dataConn.on('open', () => { try{ dataConn.send({ type: 'hello' }); }catch(e){} });
       dataConn.on('close', () => {
         $('viewerDot').classList.add('off');
         $('viewerLabel').textContent = 'Déconnecté';
@@ -629,13 +853,10 @@ function initViewer(hostId){
     });
     
     peer.on('error', err => {
-      console.error('[VIEWER] Peer error:', err);
       $('viewerDot').classList.add('off');
       $('viewerLabel').textContent = 'Erreur';
-      
       if(err.type === 'peer-unavailable'){
         setStatus('❌ Lien invalide — le host n\'est pas en ligne', 'var(--rd)');
-        notice.querySelector('p').textContent = 'Impossible de joindre le host. Vérifiez que le lien est correct et que le host a lancé sa session.';
       }else{
         setStatus('❌ ' + err.type, 'var(--rd)');
       }
@@ -648,190 +869,104 @@ function initViewer(hostId){
     });
   }
   
-  /* Démarrer le partage (après consentement) */
   async function startSharing(){
-    /* Étape 1 : Popup navigateur */
     $('permModal').classList.add('show');
-    
     $('btnPermAccept').onclick = async () => {
       $('permModal').classList.remove('show');
-      await actuallyStartCamera();
+      try{
+        setStatus('Demande d\'accès caméra…', 'var(--am)');
+        localStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
+          audio: false
+        });
+        localCam.srcObject = localStream;
+        localCam.muted = true;
+        localCam.classList.remove('hide');
+        placeholder.style.display = 'none';
+        sharing = true;
+        shareStartTime = Date.now();
+        show(sharingBadge);
+        notice.style.display = 'none';
+        setStatus('🟢 Caméra partagée — vous pouvez arrêter', 'var(--gn)');
+        $('viewerDot').classList.remove('off');
+        $('viewerLabel').textContent = 'Partage actif';
+        timerInterval = setInterval(() => {
+          const sec = Math.floor((Date.now() - shareStartTime) / 1000);
+          shareTimer.textContent = '⏱ ' + formatDuration(sec);
+        }, 1000);
+        
+        let stopBtn = $('stopSharingBtn');
+        if(!stopBtn){
+          stopBtn = document.createElement('button');
+          stopBtn.id = 'stopSharingBtn';
+          stopBtn.textContent = '⏹ Arrêter le partage';
+          stopBtn.style.cssText = 'position:fixed;bottom:max(20px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:var(--rd);color:#fff;border:none;padding:16px 32px;border-radius:12px;font-weight:800;font-size:15px;cursor:pointer;z-index:100;box-shadow:0 4px 20px rgba(255,77,94,.5)';
+          stopBtn.onclick = stopSharing;
+          document.body.appendChild(stopBtn);
+        }
+        stopBtn.style.display = 'block';
+        
+        callHost();
+      }catch(e){
+        const msg = e.name === 'NotAllowedError' ? 'Caméra refusée.'
+          : e.name === 'NotFoundError' ? 'Aucune caméra.'
+          : e.message;
+        setStatus('❌ ' + msg, 'var(--rd)');
+        toast('Caméra refusée', 'err');
+      }
     };
-    
     $('btnPermRefuse').onclick = () => {
       $('permModal').classList.remove('show');
-      setStatus('Vous avez annulé', 'var(--mu)');
+      setStatus('Annulé', 'var(--mu)');
     };
-  }
-  
-  async function actuallyStartCamera(){
-    try{
-      setStatus('Demande d\'accès caméra…', 'var(--am)');
-      
-      /* Étape 2 : Popup navigateur (obligatoire) */
-      localStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
-        audio: false
-      });
-      
-      console.log('[VIEWER] Camera obtained');
-      
-      /* Afficher la preview */
-      localCam.srcObject = localStream;
-      localCam.muted = true;
-      localCam.classList.remove('hide');
-      placeholder.style.display = 'none';
-      
-      sharing = true;
-      shareStartTime = Date.now();
-      
-      /* Badge + timer */
-      show(sharingBadge);
-      setStatus('🟢 Caméra partagée — vous pouvez arrêter à tout moment', 'var(--gn)');
-      $('viewerDot').classList.remove('off');
-      $('viewerLabel').textContent = 'Partage actif';
-      
-      /* Cacher le notice d'acceptation */
-      notice.style.display = 'none';
-      
-      /* Timer */
-      clearInterval(timerInterval);
-      timerInterval = setInterval(() => {
-        const sec = Math.floor((Date.now() - shareStartTime) / 1000);
-        const m = Math.floor(sec / 60);
-        const s = sec % 60;
-        shareTimer.textContent = `⏱ ${m}:${s.toString().padStart(2, '0')}`;
-      }, 1000);
-      
-      /* Ajouter un bouton d'arrêt */
-      let stopBtn = $('stopSharingBtn');
-      if(!stopBtn){
-        stopBtn = document.createElement('button');
-        stopBtn.id = 'stopSharingBtn';
-        stopBtn.textContent = '⏹ Arrêter le partage';
-        stopBtn.style.cssText = 'position:fixed;bottom:max(20px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:var(--rd);color:#fff;border:none;padding:16px 32px;border-radius:12px;font-weight:800;font-size:15px;cursor:pointer;z-index:100;box-shadow:0 4px 20px rgba(255,77,94,.5)';
-        stopBtn.onclick = stopSharing;
-        document.body.appendChild(stopBtn);
-      }
-      stopBtn.style.display = 'block';
-      
-      /* Envoyer au host */
-      callHost();
-      
-    }catch(e){
-      console.error('[VIEWER] Camera error:', e);
-      const msg = e.name === 'NotAllowedError'
-        ? 'Vous avez refusé l\'accès à la caméra. Le partage ne peut pas démarrer.'
-        : e.name === 'NotFoundError'
-        ? 'Aucune caméra détectée sur cet appareil.'
-        : e.message;
-      
-      setStatus('❌ ' + msg, 'var(--rd)');
-      toast('Caméra refusée', 'err');
-    }
   }
   
   function callHost(){
-    if(!peer || !peer.open){
-      setStatus('❌ Pas de connexion au host', 'var(--rd)');
-      return;
-    }
-    if(!localStream){
-      setStatus('❌ Caméra pas prête', 'var(--rd)');
-      return;
-    }
-    
+    if(!peer || !peer.open || !localStream) return;
     const videoTrack = localStream.getVideoTracks()[0];
     if(!videoTrack) return;
-    
-    console.log('[VIEWER] Calling host with camera stream');
     const outStream = new MediaStream([videoTrack]);
-    
-    try{
-      currentCall = peer.call(hostId, outStream);
-      
-      if(!currentCall){
-        setStatus('❌ Échec de l\'appel', 'var(--rd)');
-        return;
-      }
-      
-      currentCall.on('close', () => {
-        console.log('[VIEWER] Call closed');
-        setStatus('Connexion fermée', 'var(--mu)');
-      });
-      
-      currentCall.on('error', e => {
-        console.error('[VIEWER] Call error:', e);
-      });
-      
-      /* Informer le host */
-      if(dataConn && dataConn.open){
-        try{ dataConn.send({ type: 'sharing' }); }catch(e){}
-      }
-      
-      setStatus('🟢 Caméra envoyée au host', 'var(--gn)');
-      
-    }catch(e){
-      console.error('[VIEWER] call failed:', e);
-      setStatus('❌ ' + e.message, 'var(--rd)');
+    currentCall = peer.call(hostId, outStream);
+    if(currentCall){
+      currentCall.on('error', e => console.error(e));
+      if(dataConn && dataConn.open) try{ dataConn.send({ type: 'sharing' }); }catch(e){}
     }
   }
   
   function stopSharing(){
-    if(localStream){
-      localStream.getTracks().forEach(t => t.stop());
-      localStream = null;
-    }
-    
+    if(localStream) localStream.getTracks().forEach(t => t.stop());
+    localStream = null;
     if(currentCall) try{ currentCall.close(); }catch(e){}
     currentCall = null;
-    
     sharing = false;
     clearInterval(timerInterval);
-    timerInterval = null;
-    
     localCam.srcObject = null;
     localCam.classList.add('hide');
     placeholder.style.display = 'flex';
     hide(sharingBadge);
     shareTimer.textContent = '—';
-    
     $('viewerDot').classList.add('off');
     $('viewerLabel').textContent = 'Partage arrêté';
     setStatus('Partage arrêté', 'var(--mu)');
-    
-    /* Cacher le bouton stop */
     const stopBtn = $('stopSharingBtn');
     if(stopBtn) stopBtn.style.display = 'none';
-    
-    /* Informer le host */
-    if(dataConn && dataConn.open){
-      try{ dataConn.send({ type: 'stopped' }); }catch(e){}
-    }
-    
-    /* Réafficher le notice */
     notice.style.display = 'flex';
+    if(dataConn && dataConn.open) try{ dataConn.send({ type: 'stopped' }); }catch(e){}
   }
   
   $('btnAcceptShare').onclick = startSharing;
   $('btnRefuseShare').onclick = () => {
-    setStatus('Vous avez refusé le partage', 'var(--mu)');
-    if(dataConn && dataConn.open){
-      try{ dataConn.send({ type: 'stopped' }); }catch(e){}
-    }
-    toast('Partage refusé');
+    setStatus('Refusé', 'var(--mu)');
+    if(dataConn && dataConn.open) try{ dataConn.send({ type: 'stopped' }); }catch(e){}
   };
   
   connect();
-  
   setInterval(() => {
-    if(peer && peer.disconnected && !peer.destroyed){
-      try{ peer.reconnect(); }catch(e){}
-    }
+    if(peer && peer.disconnected && !peer.destroyed) try{ peer.reconnect(); }catch(e){}
   }, 5000);
 }
   
 })();
 </script>
 </body>
-     </html>
+         </html>
